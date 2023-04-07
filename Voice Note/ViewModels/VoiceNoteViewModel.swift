@@ -12,6 +12,7 @@ class VoiceNoteViewModel: ObservableObject{
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
     private var triggerMeteringInterval: TimeInterval = 0.01
+    private var audioRecordingDuration: TimeInterval = 10.00
     private var timer: Timer?
     private var currentSample: Int
     private let numberOfSample: Int
@@ -59,9 +60,8 @@ class VoiceNoteViewModel: ObservableObject{
             audioRecorder = try AVAudioRecorder(url: audioFileName, settings: settings)
             audioRecorder?.isMeteringEnabled = true
             audioRecorder?.prepareToRecord()
-            audioRecorder?.record()
+            audioRecorder?.record(forDuration: audioRecordingDuration)
             self.enableMicrophoneMonitoring()
-            
         } catch {
             print("Error Setting Up Recorder \(error.localizedDescription)")
         }
@@ -116,5 +116,6 @@ class VoiceNoteViewModel: ObservableObject{
     private func disableMicriphoneMonitoring() {
         timer?.invalidate()
     }
+    
     
 }

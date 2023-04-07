@@ -72,7 +72,6 @@ struct BottomBarView: View {
     
     private func clickAudioButton() {
         voiceNoteViewModel.isRecording.toggle()
-        print("Recording bool: \( voiceNoteViewModel.isRecording)")
         if voiceNoteViewModel.isRecording {
             withAnimation {
                 showSheet = true
