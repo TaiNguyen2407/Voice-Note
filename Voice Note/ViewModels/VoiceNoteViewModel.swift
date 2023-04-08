@@ -8,29 +8,40 @@
 import Foundation
 import AVFoundation
 
-class VoiceNoteViewModel: ObservableObject{
+class VoiceNoteViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate{
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
     private var triggerMeteringInterval: TimeInterval = 0.01
     private var audioRecordingDuration: TimeInterval = 10.00
     private var timer: Timer?
-    private var currentSample: Int
-    private let numberOfSample: Int
+    private var currentSample: Int = 0
+    static let numberOfSample: Int = 15
     
     @Published var isRecording: Bool = false
     @Published var recordingList = [Recording]()
     @Published var fileUrlList = [URL]()
-    @Published var soundSamples: [Float]
+    @Published var soundSamples: [Float] = [Float](repeating:.zero, count: VoiceNoteViewModel.numberOfSample)
+    @Published var audioIsPlaying:Bool = false
     
-    init (numberOfSample: Int) {
-        self.numberOfSample = numberOfSample
-        self.soundSamples = [Float](repeating:.zero, count:numberOfSample)
-        self.currentSample = 0
+    override init () {
+        super.init()
         self.fetchAllRecordings()
     }
     
     deinit {
         stopRecording()
+    }
+    
+    /**
+        Tells the delegate to set the isPlaying to false when the audio finishes playing.
+     */
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        print("function is called")
+        if let newestRecordUrl = fileUrlList.last {
+            var currentRecording = findTheCurrentRecording(recordingUrl: newestRecordUrl)
+            currentRecording?.isPlaying = false
+            audioIsPlaying = false
+        }
     }
     
     func startRecording() {
@@ -106,7 +117,7 @@ class VoiceNoteViewModel: ObservableObject{
         timer = Timer.scheduledTimer(withTimeInterval: triggerMeteringInterval, repeats: true, block: { timer in
             self.audioRecorder?.updateMeters()
             self.soundSamples[self.currentSample] = self.audioRecorder?.averagePower(forChannel: 0) ?? 0.0
-            self.currentSample = (self.currentSample + 1) % self.numberOfSample
+            self.currentSample = (self.currentSample + 1) % VoiceNoteViewModel.numberOfSample
         })
     }
     
@@ -123,17 +134,13 @@ class VoiceNoteViewModel: ObservableObject{
             try audioPlayingSession.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
             audioPlayer = try AVAudioPlayer(contentsOf: recordingUrl)
             if let audioPlayer = audioPlayer {
+                audioPlayer.delegate = self
                 audioPlayer.prepareToPlay()
                 audioPlayer.play()
             }
-            var foundRecording = recordingList.filter { recording in
-                recording.fileUrl == recordingUrl
-            }
-            for i in 0..<foundRecording.count {
-                if foundRecording[i].fileUrl == recordingUrl {
-                    foundRecording[i].isPlaying = true
-                }
-            }
+            var currentRecording = findTheCurrentRecording(recordingUrl: recordingUrl)
+            currentRecording?.isPlaying = true
+            audioIsPlaying = true
         } catch {
             print("Error playing recording \(error.localizedDescription)")
         }
@@ -141,10 +148,16 @@ class VoiceNoteViewModel: ObservableObject{
     
     func stopPlaying(recordingUrl: URL) {
         audioPlayer?.stop()
-        var foundRecording = recordingList.filter { recording in
-            recording.fileUrl == recordingUrl
-        }
-        foundRecording[0].isPlaying = true
+        var currentRecording = findTheCurrentRecording(recordingUrl: recordingUrl)
+        currentRecording?.isPlaying = false
+        audioIsPlaying = false
     }
     
+    func findTheCurrentRecording(recordingUrl: URL) -> Recording? {
+        let foundRecording = recordingList.filter { recording in
+            recording.fileUrl == recordingUrl
+        }
+        return foundRecording.count > 0 ? foundRecording[0] : nil
+    }
+
 }

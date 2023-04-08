@@ -92,6 +92,6 @@ struct BottomBarView: View {
 
 struct BottomBarView_Previews: PreviewProvider {
     static var previews: some View {
-        BottomBarView(showSheet: .constant(false)).environmentObject(VoiceNoteViewModel(numberOfSample: samples)).environmentObject(SpeechRecognizer())
+        BottomBarView(showSheet: .constant(false)).environmentObject(VoiceNoteViewModel()).environmentObject(SpeechRecognizer())
     }
 }

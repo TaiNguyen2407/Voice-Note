@@ -19,35 +19,36 @@ struct AudioConfirmationView: View {
 
 struct recordingCardView: View {
     @EnvironmentObject var voiceNoteViewModel: VoiceNoteViewModel
-    let borderColor = #colorLiteral(red: 0.1215686277, green: 0.01176470611, blue: 0.4235294163, alpha: 1)
+    @State var isPlayed: Bool = false
+    private let borderColor = #colorLiteral(red: 0.1215686277, green: 0.01176470611, blue: 0.4235294163, alpha: 1)
+
     var body: some View {
         HStack() {
             if voiceNoteViewModel.soundSamples.count != 0 {
                 ForEach(voiceNoteViewModel.soundSamples, id: \.self) { sampleValue in
                     WaveView(value: voiceNoteViewModel.normalizeSoundLevel(level: sampleValue,barHeight: CGFloat(50)))
-                    
                 }
             }
             Button {
+                isPlayed.toggle()
                 if let newestRecordUrl = voiceNoteViewModel.fileUrlList.last {
-                    voiceNoteViewModel.startPlaying(recordingUrl: newestRecordUrl)
+                    isPlayed
+                        ? voiceNoteViewModel.startPlaying(recordingUrl: newestRecordUrl)
+                        : voiceNoteViewModel.stopPlaying(recordingUrl: newestRecordUrl)
                 }
-                
             } label: {
-                Image(systemName: "play.fill")
+                Image(systemName: voiceNoteViewModel.audioIsPlaying  ? "square.fill" : "play.fill").foregroundColor(Color.black)
             }
-
         }
         .frame(alignment: .leading)
         .padding()
         .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color(borderColor), lineWidth: 2))
     }
-    
 }
 
 
 struct AudioConfirmationView_Previews: PreviewProvider {
     static var previews: some View {
-        AudioConfirmationView().environmentObject(SpeechRecognizer()).environmentObject(VoiceNoteViewModel(numberOfSample: samples))
+        AudioConfirmationView().environmentObject(SpeechRecognizer()).environmentObject(VoiceNoteViewModel())
     }
 }
