@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct AudioConfirmationView: View {
     @EnvironmentObject var speechRecognizer: SpeechRecognizer
@@ -44,8 +45,32 @@ struct AudioConfirmationView: View {
 }
 
 
-struct AudioConfirmationView_Previews: PreviewProvider {
+/*struct AudioConfirmationView_Previews: PreviewProvider {
     static var previews: some View {
         AudioConfirmationView(showSheet: .constant(false)).environmentObject(SpeechRecognizer()).environmentObject(VoiceNoteViewModel())
     }
 }
+*/
+
+import CoreData
+
+struct AudioConfirmationView_Previews: PreviewProvider {
+    static var previews: some View {
+        let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        let storeDescription = NSPersistentStoreDescription()
+        storeDescription.type = NSInMemoryStoreType
+        let container = NSPersistentContainer(name: "VoiceNote", managedObjectModel: .init())
+        container.persistentStoreDescriptions = [storeDescription]
+        
+        container.loadPersistentStores { (_, error) in
+            if let error = error {
+                fatalError("Error: \(error.localizedDescription)")
+            }
+        }
+        
+        return AudioConfirmationView(showSheet: .constant(false))
+            .environmentObject(SpeechRecognizer())
+            .environmentObject(VoiceNoteViewModel(context: context))
+    }
+}
+

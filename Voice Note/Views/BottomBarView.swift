@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct BottomBarView: View {
     @EnvironmentObject var voiceNoteViewModel: VoiceNoteViewModel
@@ -128,8 +129,31 @@ struct BottomBarView: View {
     }
 }
 
-struct BottomBarView_Previews: PreviewProvider {
+/*struct BottomBarView_Previews: PreviewProvider {
     static var previews: some View {
         BottomBarView(showSheet: .constant(false)).environmentObject(VoiceNoteViewModel()).environmentObject(SpeechRecognizer())
     }
 }
+*/
+import CoreData
+
+struct BottomBarView_Previews: PreviewProvider {
+    static var previews: some View {
+        let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        let storeDescription = NSPersistentStoreDescription()
+        storeDescription.type = NSInMemoryStoreType
+        let container = NSPersistentContainer(name: "VoiceNote", managedObjectModel: .init())
+        container.persistentStoreDescriptions = [storeDescription]
+        
+        container.loadPersistentStores { (_, error) in
+            if let error = error {
+                fatalError("Error: \(error.localizedDescription)")
+            }
+        }
+        
+        return BottomBarView(showSheet: .constant(false))
+            .environmentObject(VoiceNoteViewModel(context: context))
+            .environmentObject(SpeechRecognizer())
+    }
+}
+

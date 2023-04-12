@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct ContentView: View {
     @State var showSheet:Bool = false
@@ -25,10 +26,35 @@ struct ContentView: View {
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
+/*struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
             ContentView().environmentObject(VoiceNoteViewModel()).environmentObject(SpeechRecognizer())
         }
     }
 }
+*/
+import CoreData
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        let storeDescription = NSPersistentStoreDescription()
+        storeDescription.type = NSInMemoryStoreType
+        let container = NSPersistentContainer(name: "VoiceNote", managedObjectModel: .init())
+        container.persistentStoreDescriptions = [storeDescription]
+        
+        container.loadPersistentStores { (_, error) in
+            if let error = error {
+                fatalError("Error: \(error.localizedDescription)")
+            }
+        }
+        
+        return NavigationView {
+            ContentView()
+                .environmentObject(VoiceNoteViewModel(context: context))
+                .environmentObject(SpeechRecognizer())
+        }
+    }
+}
+

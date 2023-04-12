@@ -44,8 +44,29 @@ struct RecordingCardView: View {
     }
 }
 
-struct RecordingCardView_Previews: PreviewProvider {
+/*struct RecordingCardView_Previews: PreviewProvider {
     static var previews: some View {
         RecordingCardView().environmentObject(VoiceNoteViewModel())
     }
 }
+*/
+import CoreData
+
+struct RecordingCardView_Previews: PreviewProvider {
+    static var previews: some View {
+        let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        let storeDescription = NSPersistentStoreDescription()
+        storeDescription.type = NSInMemoryStoreType
+        let container = NSPersistentContainer(name: "VoiceNote", managedObjectModel: .init())
+        container.persistentStoreDescriptions = [storeDescription]
+        
+        container.loadPersistentStores { (_, error) in
+            if let error = error {
+                fatalError("Error: \(error.localizedDescription)")
+            }
+        }
+        
+        return RecordingCardView().environmentObject(VoiceNoteViewModel(context: context))
+    }
+}
+

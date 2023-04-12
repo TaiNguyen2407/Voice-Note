@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreLocation
+import CoreData
 
 struct RecordingListView: View {
     @EnvironmentObject var voiceNoteViewModel:VoiceNoteViewModel
@@ -30,8 +31,28 @@ struct RecordingListView: View {
     }
 }
 
+/*struct RecordingListView_Previews: PreviewProvider {
+ static var previews: some View {
+ RecordingListView().environmentObject(VoiceNoteViewModel())
+ }
+ }
+ */
+
 struct RecordingListView_Previews: PreviewProvider {
     static var previews: some View {
-        RecordingListView().environmentObject(VoiceNoteViewModel())
+        let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        let storeDescription = NSPersistentStoreDescription()
+        storeDescription.type = NSInMemoryStoreType
+        let container = NSPersistentContainer(name: "VoiceNote", managedObjectModel: .init())
+        container.persistentStoreDescriptions = [storeDescription]
+        
+        container.loadPersistentStores { (_, error) in
+            if let error = error {
+                fatalError("Error: \(error.localizedDescription)")
+            }
+        }
+        
+        return RecordingListView()
+            .environmentObject(VoiceNoteViewModel(context: context))
     }
 }
