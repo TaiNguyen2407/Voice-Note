@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import CoreData
 
 class VoiceNoteViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private var audioRecorder: AVAudioRecorder?
@@ -17,22 +18,27 @@ class VoiceNoteViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private var timer: Timer?
     private var currentSample: Int = 0
     static let numberOfSample: Int = 15
-    
+
     @Published var isRecording: Bool = false
     @Published var isRecordingPaused: Bool = false
-    @Published var fileUrlList = [URL]()
+    @Published var voiceNotes = [VoiceNoteEntity]()
     @Published var isMicPressed: Bool = false
-    @Published var soundSamples: [Float] = [Float](repeating:.zero, count: VoiceNoteViewModel.numberOfSample)
-    @Published var audioIsPlaying:Bool = false
+    @Published var soundSamples: [Float] = [Float](repeating: .zero, count: VoiceNoteViewModel.numberOfSample)
+    @Published var audioIsPlaying: Bool = false
     @Published var confirmTheVoiceNote: Bool = false
+    @Published var fileUrlList: [URL] = []
+
+    private let context: NSManagedObjectContext
     
-    override init () {
-        super.init()
-    }
-    
-    deinit {
-        stopRecording()
-    }
+    init(context: NSManagedObjectContext) {
+            self.context = context
+            super.init()
+            fetchVoiceNotes()
+        }
+
+        deinit {
+            stopRecording()
+        }
     
     /**
      Tells the delegate to set the isPlaying to false when the audio finishes playing.
@@ -41,6 +47,49 @@ class VoiceNoteViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
         print("function is called")
         audioIsPlaying = false
     }
+    private func fetchVoiceNotes() {
+            let fetchRequest: NSFetchRequest<VoiceNoteEntity> = VoiceNoteEntity.fetchRequest()
+            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+
+            do {
+                voiceNotes = try context.fetch(fetchRequest)
+            } catch {
+                print("Error fetching voice notes: \(error.localizedDescription)")
+            }
+        }
+
+
+    private func saveVoiceNote(title: String, text: String, near: String, duration: Double, createdAt: Date, latitude: Double, longitude: Double) {
+            let newVoiceNote = VoiceNoteEntity(context: context)
+            newVoiceNote.id = UUID()
+            newVoiceNote.title = title
+            newVoiceNote.text = text
+            newVoiceNote.near = near
+            newVoiceNote.duration = duration
+            newVoiceNote.createdAt = createdAt
+            newVoiceNote.latitude = latitude
+            newVoiceNote.longitude = longitude
+
+            do {
+                try context.save()
+                print("Saved Voice Note to Core Data")
+            } catch {
+                print("Error saving voice note: \(error)")
+            }
+        }
+
+        private func deleteVoiceNote(voiceNote: VoiceNoteEntity) {
+            context.delete(voiceNote)
+            
+            do {
+                try context.save()
+                if let index = voiceNotes.firstIndex(of: voiceNote) {
+                    voiceNotes.remove(at: index)
+                }
+            } catch {
+                print("Error deleting voice note: \(error.localizedDescription)")
+            }
+        }
     
     func startRecording() {
         let recordingSession = AVAudioSession.sharedInstance()
@@ -168,3 +217,6 @@ class VoiceNoteViewModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
     }
 }
+
+
+
