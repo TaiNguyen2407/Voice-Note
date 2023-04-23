@@ -5,40 +5,39 @@
 //  Created by Giao Ngo on 18.4.2023.
 //
 import SwiftUI
-import CoreLocation
+import CoreData
 
 struct DetailView: View {
     @EnvironmentObject var voiceNoteViewModel: VoiceNoteViewModel
     @Environment(\.presentationMode) var presentationMode
     let textContainer = #colorLiteral(red: 0.4, green: 0.2039215686, blue: 0.4980392157, alpha: 0.2)
     private let voiceNote: VoiceNote
-    
-    @State private var editableText: String
     @State private var isEditing = false
-    
+    @State private var editText: String
+
     init(voiceNote: VoiceNote) {
         self.voiceNote = voiceNote
-        self._editableText = State(initialValue: voiceNote.text ?? "")
+        _editText = State(initialValue: voiceNote.text ?? "")
     }
-    
+
     var body: some View {
         VStack {
             if isEditing {
-                TextEditor(text: $editableText)
+                TextEditor(text: $editText)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color(textContainer))
                     .cornerRadius(20)
                     .padding()
             } else {
-                Text(editableText)
+                Text(voiceNote.text ?? "")
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color(textContainer))
                     .cornerRadius(20)
                     .padding()
             }
-
+            
             RecordingCardView().padding(15)
             Text("Duration: \(voiceNote.duration)s")
             HStack {
@@ -47,10 +46,10 @@ struct DetailView: View {
                     print("Direction pressed")
                 }, icon: "arrow.triangle.turn.up.right.diamond.fill")
                 
-                //  Edit button
+                // Edit button
                 DetailBtn(clickHander: {
                     toggleEditing()
-                }, icon: "pencil")
+                }, icon: isEditing ? "checkmark" : "pencil", alternativeIcon: isEditing ? "checkmark.circle.fill" : "")
                 
                 // Delete button
                 DetailBtn(clickHander: {
@@ -62,30 +61,37 @@ struct DetailView: View {
                     print("Share pressed")
                 }, icon: "square.and.arrow.up").disabled(true)
             }
-
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
     
     private func toggleEditing() {
+        if isEditing {
+            saveEditedText()
+        }
         isEditing.toggle()
-        
-        if !isEditing {
-            voiceNote.text = editableText
-            // Save the changes to the voice note text
-            do {
-                try voiceNote.managedObjectContext?.save()
-            } catch {
-                print("Error saving edited text: \(error)")
-            }
+    }
+    
+    private func saveEditedText() {
+        let context = PersistenceController.shared.container.viewContext
+        voiceNote.text = editText
+        do {
+            try context.save()
+        } catch {
+            print("Error saving edited text: \(error)")
         }
     }
     
     private func deleteVoiceNote() {
-        let coreDataService = CoreDataService.localStorage
-        coreDataService.delete(voiceNote)
-        presentationMode.wrappedValue.dismiss()
+        let context = PersistenceController.shared.container.viewContext
+        context.delete(voiceNote)
+        do {
+            try context.save()
+            presentationMode.wrappedValue.dismiss()
+        } catch {
+            print("Error deleting voice note: \(error)")
+        }
     }
 }
 
@@ -93,21 +99,36 @@ struct DetailBtn: View {
     let buttonColor = #colorLiteral(red: 0.1764705926, green: 0.01176470611, blue: 0.5607843399, alpha: 1)
     let clickHander: () -> Void
     let icon: String
+    let alternativeIcon: String?
+    
+    init(clickHander: @escaping () -> Void, icon: String, alternativeIcon: String? = nil) {
+        self.clickHander = clickHander
+        self.icon = icon
+        self.alternativeIcon = alternativeIcon
+    }
     
     var body: some View {
-        Button {
-            clickHander()
-        } label: {
-            Image(systemName: icon)
-                .font(.title2)
-                .padding(10)
-                .background(Color(.systemGray6))
-                .clipShape(Circle())
-                .foregroundColor(Color(buttonColor))
-        }.padding(.horizontal,20)
+            Button {
+                clickHander()
+            } label: {
+                if let alternativeIcon = alternativeIcon, !alternativeIcon.isEmpty {
+                    Image(systemName: alternativeIcon)
+                        .font(.title2)
+                        .padding(10)
+                        .background(Color(.systemGray6))
+                        .clipShape(Circle())
+                        .foregroundColor(Color(buttonColor))
+                } else {
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .padding(10)
+                        .background(Color(.systemGray6))
+                        .clipShape(Circle())
+                        .foregroundColor(Color(buttonColor))
+                }
+            }.padding(.horizontal,20)
+        }
     }
-}
-
 /*struct DetailView_Previews: PreviewProvider {
     static var previews: some View {
         DetailView(voiceNote: VoiceNote(
